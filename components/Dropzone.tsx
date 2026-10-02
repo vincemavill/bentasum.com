@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { parseSpreadsheetFile, parseMultipleSpreadsheets } from '@/lib/excelParser';
-import { ParsedSpreadsheet } from '@/types/profile';
+import { ParsedSpreadsheet, IndividualFileInfo } from '@/types/profile';
 
 interface DropzoneProps {
   onDataLoaded: (data: ParsedSpreadsheet) => void;
@@ -23,6 +23,83 @@ export default function Dropzone({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Normalize files list for display
+  const fileList: IndividualFileInfo[] = useMemo(() => {
+    if (!currentData) return [];
+    if (currentData.files && currentData.files.length > 0) {
+      return currentData.files;
+    }
+    if (currentData.fileNames && currentData.fileNames.length > 0) {
+      return currentData.fileNames.map((name) => ({
+        fileName: name,
+        fileSize: Math.round(currentData.fileSize / currentData.fileNames!.length),
+        rowCount: Math.round(currentData.totalRowCount / currentData.fileNames!.length),
+      }));
+    }
+    return [
+      {
+        fileName: currentData.fileName,
+        fileSize: currentData.fileSize,
+        rowCount: currentData.totalRowCount,
+        rows: currentData.rows,
+      },
+    ];
+  }, [currentData]);
+
+  const isSingleFile = fileList.length <= 1;
+
+  // Remove an individual file from the loaded collection
+  const handleRemoveFile = (indexToRemove: number) => {
+    if (!currentData) return;
+
+    if (fileList.length <= 1) {
+      onReset();
+      return;
+    }
+
+    const remaining = fileList.filter((_, idx) => idx !== indexToRemove);
+    if (remaining.length === 0) {
+      onReset();
+      return;
+    }
+
+    // Combine remaining files' rows
+    let newRows: Record<string, any>[] = [];
+    const hasEmbeddedRows = fileList.every((f) => f.rows && f.rows.length > 0);
+    if (hasEmbeddedRows) {
+      newRows = remaining.flatMap((f) => f.rows || []);
+    } else {
+      let currentRowOffset = 0;
+      for (let i = 0; i < fileList.length; i++) {
+        const count = fileList[i].rowCount;
+        if (i !== indexToRemove) {
+          newRows.push(...currentData.rows.slice(currentRowOffset, currentRowOffset + count));
+        }
+        currentRowOffset += count;
+      }
+    }
+
+    const newTotalFileSize = remaining.reduce((acc, f) => acc + f.fileSize, 0);
+    const newDisplayFileName =
+      remaining.length === 1
+        ? remaining[0].fileName
+        : `${remaining[0].fileName} (+${remaining.length - 1} more)`;
+
+    const updated: ParsedSpreadsheet = {
+      fileName: newDisplayFileName,
+      fileSize: newTotalFileSize,
+      headers: currentData.headers,
+      summableHeaders: currentData.summableHeaders,
+      dateHeaders: currentData.dateHeaders,
+      rows: newRows,
+      totalRowCount: newRows.length,
+      fileCount: remaining.length,
+      fileNames: remaining.map((f) => f.fileName),
+      files: remaining,
+    };
+    onDataLoaded(updated);
+  };
 
   const handleProcessFiles = async (files: File[]) => {
     setErrorMessage(null);
@@ -223,8 +300,8 @@ export default function Dropzone({
             </div>
           </div>
         </div>
-      ) : (
-        /* Loaded File Header Card */
+      ) : isSingleFile ? (
+        /* Loaded File Header Card (Single File: Full-width row) */
         <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-emerald-300/80 bg-emerald-50/40 p-4 sm:flex-row sm:items-center dark:border-emerald-800/80 dark:bg-emerald-950/20">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm dark:bg-emerald-500">
@@ -244,46 +321,136 @@ export default function Dropzone({
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                   Ready
                 </span>
-                {Boolean(currentData.fileCount && currentData.fileCount > 1) && (
-                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
-                    {currentData.fileCount} Files Merged
-                  </span>
-                )}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                <span>{formatFileSize(currentData.fileSize)} total</span>
+                <span>{formatFileSize(currentData.fileSize)}</span>
                 <span>•</span>
                 <span>{currentData.totalRowCount.toLocaleString()} rows</span>
                 <span>•</span>
                 <span>{currentData.headers.length} available columns</span>
               </div>
-              {Boolean(currentData.fileNames && currentData.fileNames.length > 1) && (
-                <p
-                  className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-sm sm:max-w-xl"
-                  title={currentData.fileNames?.join(', ')}
-                >
-                  Combined: {currentData.fileNames?.join(', ')}
-                </p>
-              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            >
-              Replace Files
-            </button>
-            <button
-              type="button"
               onClick={onReset}
-              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
             >
               Remove
             </button>
           </div>
+        </div>
+      ) : (
+        /* Loaded File Header Card (Multiple Files: 3-column responsive grid with scrolling if > 6 files) */
+        <div className="rounded-2xl border border-emerald-300/80 bg-emerald-50/40 p-4 sm:p-5 dark:border-emerald-800/80 dark:bg-emerald-950/20 space-y-4">
+          {/* Header Summary & Action Controls */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-emerald-200/60 pb-3.5 dark:border-emerald-900/60">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm dark:bg-emerald-500">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                    {fileList.length} Files Uploaded
+                  </h4>
+                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                    Shared Format
+                  </span>
+                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                    Ready
+                  </span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span>{currentData.totalRowCount.toLocaleString()} total rows</span>
+                  <span>•</span>
+                  <span>{formatFileSize(currentData.fileSize)} combined</span>
+                  <span>•</span>
+                  <span>{currentData.headers.length} matching columns</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={onReset}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+              >
+                Remove All
+              </button>
+            </div>
+          </div>
+
+          {/* Cards Grid: 3 per row on desktop (lg:grid-cols-3), scrollable when > 6 files */}
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${
+              fileList.length > 6 ? 'max-h-[300px] overflow-y-auto pr-1.5' : ''
+            }`}
+          >
+            {fileList.map((file, idx) => (
+              <div
+                key={`${file.fileName}-${idx}`}
+                className="group relative flex items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-white p-3 shadow-2xs transition hover:border-emerald-300 hover:shadow-xs dark:border-slate-800 dark:bg-slate-900/90 dark:hover:border-emerald-800"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p
+                        className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100"
+                        title={file.fileName}
+                      >
+                        {file.fileName}
+                      </p>
+                      <span className="flex-shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        #{idx + 1}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>{formatFileSize(file.fileSize)}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        {file.rowCount.toLocaleString()} rows
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Remove button on each file card */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFile(idx)}
+                  title={`Remove ${file.fileName}`}
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:text-slate-500 dark:hover:bg-rose-950/50 dark:hover:text-rose-300"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18" />
+                    <path d="M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {fileList.length > 6 && (
+            <p className="text-right text-[11px] font-medium text-slate-400">
+              Showing all {fileList.length} files (scroll to view more)
+            </p>
+          )}
         </div>
       )}
 

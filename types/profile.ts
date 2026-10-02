@@ -7,6 +7,13 @@ export interface ProfileTemplate {
   orderIdColumn?: string;
 }
 
+export interface IndividualFileInfo {
+  fileName: string;
+  fileSize: number;
+  rowCount: number;
+  rows?: Record<string, any>[];
+}
+
 export interface ParsedSpreadsheet {
   fileName: string;
   fileSize: number;
@@ -17,6 +24,7 @@ export interface ParsedSpreadsheet {
   totalRowCount: number;
   fileCount?: number;
   fileNames?: string[];
+  files?: IndividualFileInfo[];
 }
 
 export interface DateFilterConfig {

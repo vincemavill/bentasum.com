@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ColumnMetric, ExportFormat, ParsedSpreadsheet } from '@/types/profile';
+import { ColumnMetric, ExportFormat, ParsedSpreadsheet, IndividualFileInfo } from '@/types/profile';
 
 /**
  * Sanitizes currency strings and numeric text into a valid JavaScript float.
@@ -139,6 +139,7 @@ export async function parseSpreadsheetFile(file: File): Promise<ParsedSpreadshee
     totalRowCount: dataRows.length,
     fileCount: 1,
     fileNames: [file.name],
+    files: [{ fileName: file.name, fileSize: file.size, rowCount: dataRows.length }],
   };
 }
 
@@ -193,6 +194,7 @@ export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSp
 
   // Combine rows across all files, preserving base header keys
   const combinedRows: Record<string, any>[] = [];
+  const fileInfos: IndividualFileInfo[] = [];
   for (const parsed of parsedList) {
     const keyMap = new Map<string, string>();
     for (const hBase of baseHeaders) {
@@ -204,6 +206,7 @@ export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSp
       }
     }
 
+    const fileNormalizedRows: Record<string, any>[] = [];
     for (const row of parsed.rows) {
       const normalizedRow: Record<string, any> = {};
       for (const hBase of baseHeaders) {
@@ -211,8 +214,16 @@ export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSp
           Array.from(keyMap.entries()).find(([_, target]) => target === hBase)?.[0] || hBase;
         normalizedRow[hBase] = row[origKey] ?? row[hBase] ?? '';
       }
+      fileNormalizedRows.push(normalizedRow);
       combinedRows.push(normalizedRow);
     }
+
+    fileInfos.push({
+      fileName: parsed.fileName,
+      fileSize: parsed.fileSize,
+      rowCount: parsed.rows.length,
+      rows: fileNormalizedRows,
+    });
   }
 
   const totalFileSize = files.reduce((acc, f) => acc + f.size, 0);
@@ -232,6 +243,7 @@ export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSp
     totalRowCount: combinedRows.length,
     fileCount: files.length,
     fileNames,
+    files: fileInfos,
   };
 }
 
