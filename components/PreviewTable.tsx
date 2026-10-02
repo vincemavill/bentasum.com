@@ -124,7 +124,7 @@ export default function PreviewTable({
                 setCurrentPage(1);
               }}
               placeholder="Search table rows..."
-              className="w-44 rounded-xl border border-slate-300 bg-slate-50/50 py-1.5 pl-8 pr-2.5 text-xs text-slate-800 placeholder-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-44 rounded-xl border border-slate-300 bg-slate-50/50 py-1.5 pl-8 pr-2.5 text-xs text-slate-800 placeholder-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-800"
             />
             <svg
               className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400"

@@ -194,7 +194,7 @@ export default function ProfileManager({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Template &amp; Column Setup
+              Template &  Column Setup
             </h3>
             {activeProfile.isDefault && (
               <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -213,23 +213,23 @@ export default function ProfileManager({
             <select
               value={activeProfile.id}
               onChange={(e) => handleSelectProfile(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-slate-300 bg-slate-50/50 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-800 transition focus:border-emerald-500 focus:bg-white focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full appearance-none rounded-xl border border-slate-300 bg-slate-50/50 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-800 transition focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-500"
             >
-              <optgroup label="Default Presets">
+              <optgroup label="Default Presets" className="bg-white text-slate-900 font-semibold dark:bg-slate-800 dark:text-slate-100">
                 {profiles
                   .filter((p) => p.isDefault)
                   .map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 py-1">
                       {p.name}
                     </option>
                   ))}
               </optgroup>
               {profiles.some((p) => !p.isDefault) && (
-                <optgroup label="My Custom Setups">
+                <optgroup label="My Custom Setups" className="bg-white text-slate-900 font-semibold dark:bg-slate-800 dark:text-slate-100">
                   {profiles
                     .filter((p) => !p.isDefault)
                     .map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <option key={p.id} value={p.id} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 py-1">
                         {p.name}
                       </option>
                     ))}
@@ -352,9 +352,9 @@ export default function ProfileManager({
                 }
                 className="rounded-md border border-slate-300 bg-white px-2 py-0.5 text-xs text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
-                <option value="">-- Choose Column --</option>
+                <option value="" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">-- Choose Column --</option>
                 {availableHeaders.map((hdr) => (
-                  <option key={hdr} value={hdr}>
+                  <option key={hdr} value={hdr} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                     {hdr}
                   </option>
                 ))}

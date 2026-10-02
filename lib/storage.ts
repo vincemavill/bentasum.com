@@ -1,12 +1,12 @@
 import { ProfileTemplate } from '@/types/profile';
 
-export const STORAGE_KEY_PROFILES = 'bentasum_profiles_v2';
-export const STORAGE_KEY_ACTIVE_PROFILE = 'bentasum_active_profile_id_v2';
+export const STORAGE_KEY_PROFILES = 'bentasum_profiles_v3';
+export const STORAGE_KEY_ACTIVE_PROFILE = 'bentasum_active_profile_id_v3';
 
 export const DEFAULT_PROFILES: ProfileTemplate[] = [
   {
     id: 'preset-shopee',
-    name: 'Shopee Income & Orders',
+    name: 'Shopee Orders',
     isDefault: true,
     selectedColumns: [
       'Order ID',
@@ -31,7 +31,7 @@ export const DEFAULT_PROFILES: ProfileTemplate[] = [
   },
   {
     id: 'preset-lazada',
-    name: 'Lazada Orders & Statement',
+    name: 'Lazada Orders',
     isDefault: true,
     selectedColumns: [
       'orderNumber',
@@ -54,7 +54,7 @@ export const DEFAULT_PROFILES: ProfileTemplate[] = [
   },
   {
     id: 'preset-tiktok',
-    name: 'TikTok Shop Settlement',
+    name: 'Tiktok Orders',
     isDefault: true,
     selectedColumns: [
       'Order ID',
@@ -83,14 +83,23 @@ export function getStoredProfiles(): ProfileTemplate[] {
     return DEFAULT_PROFILES;
   }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROFILES);
+    const raw = localStorage.getItem(STORAGE_KEY_PROFILES) || localStorage.getItem('bentasum_profiles_v2');
     if (!raw) {
       localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(DEFAULT_PROFILES));
       return DEFAULT_PROFILES;
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Keep default preset names in sync with DEFAULT_PROFILES
+      const updated = parsed.map((p) => {
+        const defaultMatch = DEFAULT_PROFILES.find((dp) => dp.id === p.id);
+        if (defaultMatch) {
+          return { ...p, name: defaultMatch.name, isDefault: true };
+        }
+        return p;
+      });
+      localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(updated));
+      return updated;
     }
   } catch (err) {
     console.error('Error reading profiles from localStorage:', err);
