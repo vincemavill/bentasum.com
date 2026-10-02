@@ -168,7 +168,7 @@ export default function Dropzone({
 
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
             {isLoading ? (
-              <span>Reading {loadingSample || 'files'} in browser RAM...</span>
+              <span>Reading {loadingSample || 'files'} securely on your device...</span>
             ) : (
               'Drop single or multiple seller exports here, or browse files'
             )}

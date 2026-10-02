@@ -12,14 +12,14 @@ export default function Footer() {
                 Benta<span className="text-emerald-600 dark:text-emerald-400">Sum</span>
               </span>
               <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                Client-Side Only
+                100% Private
               </span>
             </div>
             <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
               Free spreadsheet formatter compatible with Shopee, Lazada, and TikTok Shop seller reports.
             </p>
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-              🔒 100% Client-Side. Your financial data never leaves your browser.
+              🔒 100% Private. Your sales data stays safe on your device and is never uploaded.
             </p>
           </div>
 
@@ -34,7 +34,7 @@ export default function Footer() {
                   href="/"
                   className="transition hover:text-emerald-600 dark:hover:text-emerald-400"
                 >
-                  Spreadsheet Formatter & Aggregator
+                  Spreadsheet Formatter &amp; Sales Summary Tool
                 </Link>
               </li>
               <li>
@@ -62,8 +62,8 @@ export default function Footer() {
               Data Safety Model
             </h4>
             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              All computations, column filtering, and sum calculations occur entirely within your browser&apos;s
-              JavaScript runtime. No files or order details are transmitted over the network or saved on remote servers.
+              Everything is processed right on your computer or phone. Your files and sales numbers are
+              never uploaded to any server or shared with anyone.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1 text-[11px] font-medium text-slate-600 dark:text-slate-400">
               <span className="rounded bg-slate-200/80 px-2 py-0.5 dark:bg-slate-800">.XLSX</span>

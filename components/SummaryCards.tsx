@@ -32,10 +32,10 @@ export default function SummaryCards({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            Aggregated Financial Totals &amp; Metrics
+            Sales Totals &amp; Summary
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Calculated client-side from {totalRowCount.toLocaleString()} parsed spreadsheet rows.
+            Calculated instantly from your {totalRowCount.toLocaleString()} spreadsheet rows.
           </p>
         </div>
 

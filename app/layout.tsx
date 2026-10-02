@@ -15,15 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'BentaSum - Free E-Commerce Spreadsheet Formatter & Aggregator',
+  title: 'BentaSum - Free E-Commerce Spreadsheet Formatter & Sales Summary Tool',
   description:
-    'Free spreadsheet formatter compatible with Shopee, Lazada, and TikTok Shop seller reports. 100% Client-Side. Your financial data never leaves your browser.',
+    'Free spreadsheet formatter compatible with Shopee, Lazada, and TikTok Shop seller reports. 100% Private. Your sales data stays safely on your device.',
   keywords: [
     'BentaSum',
     'Shopee spreadsheet formatter',
     'Lazada income report cleaner',
     'TikTok Shop settlement calculator',
-    'e-commerce sales aggregator',
+    'e-commerce sales summary tool',
     'Excel CSV cleaner for sellers',
   ],
 };

@@ -278,7 +278,7 @@ export default function HomePage() {
 
         <p className="mx-auto max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
           Format, filter, and total reports from Shopee, Lazada, TikTok Shop, or custom spreadsheets.
-          All calculations occur 100% in your browser&apos;s memory—zero server uploads, your files never leave your device.
+          Everything runs privately right on your device—zero server uploads, so your sales records stay completely safe.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
@@ -287,10 +287,10 @@ export default function HomePage() {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
-            <span>Local Browser RAM Only</span>
+            <span>100% Private (Stays on Your Device)</span>
           </span>
           <span className="text-slate-300 dark:text-slate-700">•</span>
-          <span>Zero Cloud Uploads</span>
+          <span>Zero Server Uploads</span>
           <span className="text-slate-300 dark:text-slate-700">•</span>
           <span>No Account Needed</span>
         </div>
@@ -418,7 +418,7 @@ export default function HomePage() {
               </h3>
               <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                 Download a clean, organized spreadsheet with optional totals row. Your templates are
-                saved in your local browser for next time!
+                saved right on your device for next time!
               </p>
             </div>
           </div>

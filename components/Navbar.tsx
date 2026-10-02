@@ -30,11 +30,11 @@ export default function Navbar() {
                   Benta<span className="text-emerald-600 dark:text-emerald-400">Sum</span>
                 </span>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  100% Client-Side
+                  100% Private
                 </span>
               </div>
               <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
-                E-Commerce Spreadsheet Formatter & Aggregator
+                E-Commerce Spreadsheet &amp; Sales Formatter
               </p>
             </div>
           </Link>
@@ -47,7 +47,7 @@ export default function Navbar() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
             </span>
-            <span>Zero-Server Memory Processing</span>
+            <span>Files Stay on Your Device</span>
           </div>
 
           <nav className="flex items-center gap-1 sm:gap-2">

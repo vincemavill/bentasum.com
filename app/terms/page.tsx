@@ -67,8 +67,8 @@ export default function TermsPage() {
             2. Purpose &amp; Intended Use
           </h2>
           <p>
-            BentaSum is provided as a free, client-side productivity utility intended to assist online sellers in
-            filtering columns, reformatting tables, and computing arithmetic column totals from exported marketplace
+            BentaSum is provided as a free productivity tool intended to assist online sellers in
+            picking columns, reformatting tables, and adding up sales totals from exported marketplace
             spreadsheets.
           </p>
         </section>
@@ -78,7 +78,7 @@ export default function TermsPage() {
             3. Financial Accuracy &amp; Reconciliation Disclaimer
           </h2>
           <p>
-            While BentaSum has been designed to accurately sanitize currency symbols and calculate column sums,
+            While BentaSum has been designed to accurately read currency symbols and calculate column sums,
             spreadsheets may contain formatting anomalies, formula errors, or inconsistent seller export headers.
           </p>
           <ul className="list-disc pl-5 space-y-1.5 text-slate-600 dark:text-slate-400">
@@ -88,7 +88,7 @@ export default function TermsPage() {
             </li>
             <li>
               <strong>Verification Obligation:</strong> Sellers must always cross-reference their exported figures and
-              aggregate totals against their official marketplace Seller Center statements and bank deposits before
+              summary totals against their official marketplace Seller Center statements and bank deposits before
               filing tax returns or making binding financial decisions.
             </li>
           </ul>
