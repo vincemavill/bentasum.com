@@ -137,6 +137,101 @@ export async function parseSpreadsheetFile(file: File): Promise<ParsedSpreadshee
     dateHeaders,
     rows: dataRows,
     totalRowCount: dataRows.length,
+    fileCount: 1,
+    fileNames: [file.name],
+  };
+}
+
+/**
+ * Checks whether two header lists share the same format (column names match).
+ */
+export function haveSameHeadersFormat(headers1: string[], headers2: string[]): boolean {
+  if (headers1.length !== headers2.length) return false;
+  const norm1 = headers1.map((h) => h.toLowerCase().trim());
+  const norm2 = headers2.map((h) => h.toLowerCase().trim());
+
+  // 1. Direct match by index (most marketplace multi-part exports)
+  const isDirectOrder = norm1.every((h, i) => h === norm2[i]);
+  if (isDirectOrder) return true;
+
+  // 2. Set equality
+  const set2 = new Set(norm2);
+  return norm1.every((h) => set2.has(h));
+}
+
+/**
+ * Parses multiple Excel/CSV spreadsheet files.
+ * Validates that all files share the exact same format; throws an error if any file differs.
+ */
+export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSpreadsheet> {
+  if (files.length === 0) {
+    throw new Error('No files provided.');
+  }
+
+  if (files.length === 1) {
+    return parseSpreadsheetFile(files[0]);
+  }
+
+  // Parse all files concurrently
+  const parsedList = await Promise.all(files.map((file) => parseSpreadsheetFile(file)));
+
+  // Ensure every file has readable data rows
+  for (let i = 0; i < parsedList.length; i++) {
+    if (parsedList[i].rows.length === 0) {
+      throw new Error(`File "${files[i].name}" contains no readable rows or transactions.`);
+    }
+  }
+
+  // Verify that all uploaded files share the exact same format as the first file
+  const baseHeaders = parsedList[0].headers;
+  for (let i = 1; i < parsedList.length; i++) {
+    const current = parsedList[i];
+    if (!haveSameHeadersFormat(baseHeaders, current.headers)) {
+      throw new Error('Please make sure all uploaded Excel files share the same format.');
+    }
+  }
+
+  // Combine rows across all files, preserving base header keys
+  const combinedRows: Record<string, any>[] = [];
+  for (const parsed of parsedList) {
+    const keyMap = new Map<string, string>();
+    for (const hBase of baseHeaders) {
+      const match = parsed.headers.find(
+        (h) => h.toLowerCase().trim() === hBase.toLowerCase().trim()
+      );
+      if (match) {
+        keyMap.set(match, hBase);
+      }
+    }
+
+    for (const row of parsed.rows) {
+      const normalizedRow: Record<string, any> = {};
+      for (const hBase of baseHeaders) {
+        const origKey =
+          Array.from(keyMap.entries()).find(([_, target]) => target === hBase)?.[0] || hBase;
+        normalizedRow[hBase] = row[origKey] ?? row[hBase] ?? '';
+      }
+      combinedRows.push(normalizedRow);
+    }
+  }
+
+  const totalFileSize = files.reduce((acc, f) => acc + f.size, 0);
+  const fileNames = files.map((f) => f.name);
+  const displayFileName = `${files[0].name} (+${files.length - 1} more)`;
+
+  const summableHeaders = detectSummableColumns(baseHeaders, combinedRows);
+  const dateHeaders = detectDateColumns(baseHeaders, combinedRows);
+
+  return {
+    fileName: displayFileName,
+    fileSize: totalFileSize,
+    headers: baseHeaders,
+    summableHeaders,
+    dateHeaders,
+    rows: combinedRows,
+    totalRowCount: combinedRows.length,
+    fileCount: files.length,
+    fileNames,
   };
 }
 

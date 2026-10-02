@@ -15,6 +15,8 @@ export interface ParsedSpreadsheet {
   dateHeaders?: string[];
   rows: Record<string, any>[];
   totalRowCount: number;
+  fileCount?: number;
+  fileNames?: string[];
 }
 
 export interface DateFilterConfig {

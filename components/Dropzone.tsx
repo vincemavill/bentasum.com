@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { parseSpreadsheetFile } from '@/lib/excelParser';
+import { parseSpreadsheetFile, parseMultipleSpreadsheets } from '@/lib/excelParser';
 import { ParsedSpreadsheet } from '@/types/profile';
 
 interface DropzoneProps {
@@ -24,30 +24,33 @@ export default function Dropzone({
   const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleProcessFile = async (file: File) => {
+  const handleProcessFiles = async (files: File[]) => {
     setErrorMessage(null);
-    const validExtensions = ['.xlsx', '.xls', '.csv'];
-    const lowerName = file.name.toLowerCase();
-    const isValid = validExtensions.some((ext) => lowerName.endsWith(ext));
+    if (!files || files.length === 0) return;
 
-    if (!isValid) {
-      setErrorMessage('Please upload a valid spreadsheet (.xlsx, .xls, or .csv).');
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const invalidFiles = files.filter((file) => {
+      const lowerName = file.name.toLowerCase();
+      return !validExtensions.some((ext) => lowerName.endsWith(ext));
+    });
+
+    if (invalidFiles.length > 0) {
+      setErrorMessage(
+        files.length === 1
+          ? 'Please upload a valid spreadsheet (.xlsx, .xls, or .csv).'
+          : 'Some files have invalid extensions. Please upload only .xlsx, .xls, or .csv files.'
+      );
       return;
     }
 
     try {
       setIsLoading(true);
-      const parsed = await parseSpreadsheetFile(file);
-      if (parsed.rows.length === 0) {
-        setErrorMessage('The file contains no readable rows or transactions.');
-        setIsLoading(false);
-        return;
-      }
+      const parsed = await parseMultipleSpreadsheets(files);
       onDataLoaded(parsed);
     } catch (err: any) {
       console.error(err);
       setErrorMessage(
-        err?.message || 'Could not parse the spreadsheet. Ensure it is not password protected.'
+        err?.message || 'Could not parse the spreadsheet files. Ensure they are not password protected.'
       );
     } finally {
       setIsLoading(false);
@@ -58,7 +61,7 @@ export default function Dropzone({
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleProcessFile(e.dataTransfer.files[0]);
+      handleProcessFiles(Array.from(e.dataTransfer.files));
     }
   };
 
@@ -73,8 +76,9 @@ export default function Dropzone({
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleProcessFile(e.target.files[0]);
+      handleProcessFiles(Array.from(e.target.files));
     }
+    e.target.value = '';
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -115,6 +119,7 @@ export default function Dropzone({
       <input
         ref={fileInputRef}
         type="file"
+        multiple
         accept=".xlsx,.xls,.csv"
         className="hidden"
         onChange={handleFileInputChange}
@@ -163,13 +168,13 @@ export default function Dropzone({
 
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
             {isLoading ? (
-              <span>Reading {loadingSample || 'file'} in browser RAM...</span>
+              <span>Reading {loadingSample || 'files'} in browser RAM...</span>
             ) : (
-              'Drop your seller export here, or browse files'
+              'Drop single or multiple seller exports here, or browse files'
             )}
           </h3>
           <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            Compatible with official .xlsx, .xls, and .csv exports from Shopee, Lazada, and TikTok Shop
+            Upload one or multiple .xlsx, .xls, or .csv files sharing the same format
           </p>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
@@ -239,14 +244,27 @@ export default function Dropzone({
                 <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
                   Ready
                 </span>
+                {Boolean(currentData.fileCount && currentData.fileCount > 1) && (
+                  <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                    {currentData.fileCount} Files Merged
+                  </span>
+                )}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                <span>{formatFileSize(currentData.fileSize)}</span>
+                <span>{formatFileSize(currentData.fileSize)} total</span>
                 <span>•</span>
                 <span>{currentData.totalRowCount.toLocaleString()} rows</span>
                 <span>•</span>
                 <span>{currentData.headers.length} available columns</span>
               </div>
+              {Boolean(currentData.fileNames && currentData.fileNames.length > 1) && (
+                <p
+                  className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-sm sm:max-w-xl"
+                  title={currentData.fileNames?.join(', ')}
+                >
+                  Combined: {currentData.fileNames?.join(', ')}
+                </p>
+              )}
             </div>
           </div>
 
@@ -256,7 +274,7 @@ export default function Dropzone({
               onClick={() => fileInputRef.current?.click()}
               className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
-              Replace File
+              Replace Files
             </button>
             <button
               type="button"
