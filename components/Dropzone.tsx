@@ -263,7 +263,7 @@ export default function Dropzone({
               onClick={onReset}
               className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
             >
-              Clear
+              Remove
             </button>
           </div>
         </div>

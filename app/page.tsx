@@ -79,61 +79,122 @@ export default function HomePage() {
     setStartDate('');
     setEndDate('');
 
-    if (!activeProfile) return;
-
-    // Smart profile heuristic based on filename and headers
     const lowerFileName = data.fileName.toLowerCase();
     const headerStr = data.headers.join(' ').toLowerCase();
-    let detectedProfileId = activeProfile.id;
+    const summableCols = data.summableHeaders || [];
 
+    // 1. Check existing Custom Setups first (if user created custom setups for this file format)
+    const customProfiles = profiles.filter((p) => !p.isDefault);
+    let matchedCustom: ProfileTemplate | null = null;
+    let bestCustomScore = 0;
+
+    for (const cp of customProfiles) {
+      const cleanName = cp.name.trim().toLowerCase();
+      const nameMatch = cleanName.length >= 3 && lowerFileName.includes(cleanName);
+      const matchingCols = cp.selectedColumns.filter((c) => data.headers.includes(c));
+      const overlapRatio = cp.selectedColumns.length > 0 ? matchingCols.length / cp.selectedColumns.length : 0;
+
+      let score = 0;
+      if (nameMatch) score += 60;
+      if (matchingCols.length >= 2 && overlapRatio >= 0.5) {
+        score += overlapRatio * 50;
+      }
+      if (cp.orderIdColumn && data.headers.includes(cp.orderIdColumn)) {
+        score += 20;
+      }
+
+      if (score >= 40 && score > bestCustomScore) {
+        bestCustomScore = score;
+        matchedCustom = cp;
+      }
+    }
+
+    if (matchedCustom) {
+      const validSelected = matchedCustom.selectedColumns.filter((col) => data.headers.includes(col));
+      const validSum = matchedCustom.sumColumns.filter(
+        (col) => data.headers.includes(col) && (summableCols.length === 0 || summableCols.includes(col))
+      );
+
+      const updatedActiveProfile: ProfileTemplate = {
+        ...matchedCustom,
+        selectedColumns: validSelected.length > 0 ? validSelected : data.headers.slice(0, 8),
+        sumColumns: validSum.length > 0 ? validSum : summableCols.slice(0, 4),
+      };
+
+      setActiveProfile(updatedActiveProfile);
+      setActiveProfileId(matchedCustom.id);
+      return;
+    }
+
+    // 2. Check Default Presets (Shopee, Lazada, Tiktok)
+    let detectedPresetId: string | null = null;
     if (
       lowerFileName.includes('lazada') ||
+      (data.headers.includes('orderNumber') && data.headers.includes('orderItemId')) ||
       headerStr.includes('ordernumber') ||
       headerStr.includes('orderitemid')
     ) {
-      detectedProfileId = 'preset-lazada';
+      detectedPresetId = 'preset-lazada';
     } else if (
       lowerFileName.includes('tiktok') ||
       headerStr.includes('sku subtotal') ||
       headerStr.includes('settlement') ||
-      headerStr.includes('affiliate commission')
+      headerStr.includes('affiliate commission') ||
+      (data.headers.includes('Seller SKU') && data.headers.includes('SKU Subtotal After Discount'))
     ) {
-      detectedProfileId = 'preset-tiktok';
+      detectedPresetId = 'preset-tiktok';
     } else if (
       lowerFileName.includes('shopee') ||
       headerStr.includes('deal price') ||
-      headerStr.includes('grand total') ||
-      headerStr.includes('service fee') ||
-      headerStr.includes('buyer username')
+      headerStr.includes('buyer username') ||
+      (headerStr.includes('service fee') && headerStr.includes('grand total'))
     ) {
-      detectedProfileId = 'preset-shopee';
+      detectedPresetId = 'preset-shopee';
     }
 
-    const matchedProfile = profiles.find((p) => p.id === detectedProfileId) || activeProfile;
+    // Check default preset column overlap as fallback
+    if (!detectedPresetId) {
+      for (const preset of profiles.filter((p) => p.isDefault)) {
+        const matchingPresetCols = preset.selectedColumns.filter((c) => data.headers.includes(c));
+        if (preset.selectedColumns.length > 0 && matchingPresetCols.length / preset.selectedColumns.length >= 0.6) {
+          detectedPresetId = preset.id;
+          break;
+        }
+      }
+    }
 
-    // Filter matched profile's columns to those actually present in this file
-    const validSelected = matchedProfile.selectedColumns.filter((col) =>
-      data.headers.includes(col)
-    );
+    if (detectedPresetId) {
+      const matchedPreset = profiles.find((p) => p.id === detectedPresetId);
+      if (matchedPreset) {
+        const validSelected = matchedPreset.selectedColumns.filter((col) => data.headers.includes(col));
+        const validSum = matchedPreset.sumColumns.filter(
+          (col) => data.headers.includes(col) && (summableCols.length === 0 || summableCols.includes(col))
+        );
 
-    // Strictly detect and allow only valid summable columns for arithmetic totals
-    const summableCols = data.summableHeaders || [];
-    const validSum = matchedProfile.sumColumns.filter(
-      (col) => data.headers.includes(col) && (summableCols.length === 0 || summableCols.includes(col))
-    );
+        const updatedActiveProfile: ProfileTemplate = {
+          ...matchedPreset,
+          selectedColumns: validSelected.length > 0 ? validSelected : data.headers.slice(0, 8),
+          sumColumns: validSum.length > 0 ? validSum : summableCols.slice(0, 4),
+        };
 
-    // If profile has no matching columns at all with file, select first 8 columns by default
-    const finalSelected = validSelected.length > 0 ? validSelected : data.headers.slice(0, 8);
-    const finalSum = validSum.length > 0 ? validSum : [];
+        setActiveProfile(updatedActiveProfile);
+        setActiveProfileId(matchedPreset.id);
+        return;
+      }
+    }
 
-    const updatedActiveProfile: ProfileTemplate = {
-      ...matchedProfile,
-      selectedColumns: finalSelected,
-      sumColumns: finalSum,
+    // 3. New Excel format that does not match presets or custom setups
+    // Set the dropdown value into empty
+    const emptyProfile: ProfileTemplate = {
+      id: '',
+      name: '',
+      isDefault: false,
+      selectedColumns: data.headers.slice(0, 8),
+      sumColumns: summableCols.slice(0, 4),
     };
 
-    setActiveProfile(updatedActiveProfile);
-    setActiveProfileId(matchedProfile.id);
+    setActiveProfile(emptyProfile);
+    setActiveProfileId('');
   };
 
   const handleReset = () => {

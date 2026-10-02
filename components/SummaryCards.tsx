@@ -21,7 +21,7 @@ export default function SummaryCards({
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/30 dark:text-slate-400">
         No columns currently chosen for numeric totals. Toggle the{' '}
-        <span className="font-semibold text-emerald-600 dark:text-emerald-400">∑ Sum</span> badge on any column
+        <span className="font-semibold text-emerald-600 dark:text-emerald-400">Sum</span> badge on any column
         above to see instant KPI aggregate cards.
       </div>
     );

@@ -43,13 +43,32 @@ export default function ProfileManager({
   };
 
   const handleSelectProfile = (id: string) => {
+    if (!id) {
+      setActiveProfileId('');
+      onActiveProfileChange({
+        ...activeProfile,
+        id: '',
+        name: '',
+        isDefault: false,
+      });
+      return;
+    }
     const target = profiles.find((p) => p.id === id);
     if (target) {
       // Filter out any non-summable columns from sumColumns
       const sanitizedSum = target.sumColumns.filter((c) =>
         summableHeaders.length === 0 || summableHeaders.includes(c)
       );
-      const sanitizedProfile = { ...target, sumColumns: sanitizedSum };
+      // Filter target's selected columns to available headers if file is present
+      const validSelected = availableHeaders.length > 0
+        ? target.selectedColumns.filter((c) => availableHeaders.includes(c))
+        : target.selectedColumns;
+
+      const sanitizedProfile = {
+        ...target,
+        selectedColumns: validSelected.length > 0 ? validSelected : target.selectedColumns,
+        sumColumns: sanitizedSum,
+      };
 
       setActiveProfileId(id);
       onActiveProfileChange(sanitizedProfile);
@@ -117,6 +136,10 @@ export default function ProfileManager({
   };
 
   const handleSaveCurrent = () => {
+    if (!activeProfile.id || !activeProfile.name) {
+      setIsCreatingNew(true);
+      return;
+    }
     // Sanitize sumColumns before saving
     const sanitizedSum = activeProfile.sumColumns.filter(
       (c) => summableHeaders.length === 0 || summableHeaders.includes(c)
@@ -194,11 +217,19 @@ export default function ProfileManager({
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Template &  Column Setup
+              Template &amp; Column Setup
             </h3>
-            {activeProfile.isDefault && (
+            {activeProfile.isDefault ? (
               <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 Default Preset
+              </span>
+            ) : activeProfile.id ? (
+              <span className="rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                Custom Setup
+              </span>
+            ) : (
+              <span className="rounded bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                New Format (Unsaved)
               </span>
             )}
           </div>
@@ -211,10 +242,13 @@ export default function ProfileManager({
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px]">
             <select
-              value={activeProfile.id}
+              value={activeProfile.id || ''}
               onChange={(e) => handleSelectProfile(e.target.value)}
               className="w-full appearance-none rounded-xl border border-slate-300 bg-slate-50/50 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-800 transition focus:border-emerald-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-500"
             >
+              <option value="" className="bg-white text-slate-500 italic dark:bg-slate-800 dark:text-slate-400 py-1">
+                -- Select Template --
+              </option>
               <optgroup label="Default Presets" className="bg-white text-slate-900 font-semibold dark:bg-slate-800 dark:text-slate-100">
                 {profiles
                   .filter((p) => p.isDefault)
@@ -259,7 +293,7 @@ export default function ProfileManager({
             <span>Save as New</span>
           </button>
 
-          {!activeProfile.isDefault && (
+          {!activeProfile.isDefault && Boolean(activeProfile.id) && (
             <button
               type="button"
               onClick={() => handleDeleteProfile(activeProfile.id)}
