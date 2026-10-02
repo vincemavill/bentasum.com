@@ -43,7 +43,7 @@ export default function SummaryCards({
         <div className="flex items-center gap-2 text-xs">
           <span className="text-slate-500 dark:text-slate-400">Currency:</span>
           <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-xs dark:border-slate-700 dark:bg-slate-800">
-            {['₱', '$', 'RM', 'S$'].map((sym) => (
+            {['₱', '$'].map((sym) => (
               <button
                 key={sym}
                 type="button"

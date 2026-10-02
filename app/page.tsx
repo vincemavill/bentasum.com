@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import TrustBanner from '@/components/TrustBanner';
 import Dropzone from '@/components/Dropzone';
 import ProfileManager from '@/components/ProfileManager';
 import DateRangeFilter from '@/components/DateRangeFilter';
@@ -267,10 +266,10 @@ export default function HomePage() {
       <section className="text-center space-y-4 pt-4 sm:pt-6">
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/60 dark:text-emerald-300">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
-          <span>Free E-Commerce Spreadsheet Formatter &amp; Aggregator</span>
+          <span>Free &amp; 100% Private E-Commerce Spreadsheet Formatter</span>
         </div>
 
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl dark:text-white">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
           Organize, Filter &amp; Total Your Seller Reports in{' '}
           <span className="bg-gradient-to-r from-emerald-600 to-indigo-600 bg-clip-text text-transparent">
             Seconds
@@ -278,14 +277,24 @@ export default function HomePage() {
         </h1>
 
         <p className="mx-auto max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
-          Free spreadsheet formatter compatible with Shopee, Lazada, and TikTok Shop seller reports.
-          Extract only the columns you need, calculate exact sales and deduction totals, and save custom
-          templates locally.
+          Format, filter, and total reports from Shopee, Lazada, TikTok Shop, or custom spreadsheets.
+          All calculations occur 100% in your browser&apos;s memory—zero server uploads, your files never leave your device.
         </p>
-      </section>
 
-      {/* Trust & Zero-Server Banner */}
-      <TrustBanner />
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+            <span>Local Browser RAM Only</span>
+          </span>
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+          <span>Zero Cloud Uploads</span>
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+          <span>No Account Needed</span>
+        </div>
+      </section>
 
       {/* Upload Dropzone */}
       <section className="space-y-4">
