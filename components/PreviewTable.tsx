@@ -13,6 +13,7 @@ interface PreviewTableProps {
   dateFilterColumn?: string;
   startDate?: string;
   endDate?: string;
+  dateFilterDescription?: string;
   onClearDateFilter?: () => void;
 }
 
@@ -25,6 +26,7 @@ export default function PreviewTable({
   dateFilterColumn,
   startDate,
   endDate,
+  dateFilterDescription,
   onClearDateFilter,
 }: PreviewTableProps) {
 
@@ -93,7 +95,7 @@ export default function PreviewTable({
             </span>
             {dateFilterActive && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300">
-                <span>📅 {dateFilterColumn}: {startDate || 'Earliest'} → {endDate || 'Latest'}</span>
+                <span>📅 {dateFilterColumn}: {dateFilterDescription || `${startDate || 'Earliest'} → ${endDate || 'Latest'}`}</span>
                 {onClearDateFilter && (
                   <button
                     type="button"

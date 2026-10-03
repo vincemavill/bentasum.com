@@ -544,6 +544,83 @@ export function isDateInRange(
   return true;
 }
 
+export interface AvailableMonth {
+  key: string;        // "YYYY-MM", e.g. "2026-10"
+  label: string;      // e.g. "October 2026"
+  shortLabel: string; // e.g. "Oct 2026"
+  year: number;
+  month: number;      // 1-12
+  count: number;
+}
+
+/**
+ * Extracts and aggregates all distinct calendar months present in a date column.
+ * Returned months are sorted chronologically.
+ */
+export function getAvailableMonthsForColumn(
+  rows: Record<string, any>[],
+  columnName: string
+): AvailableMonth[] {
+  if (!columnName || rows.length === 0) return [];
+
+  const monthMap = new Map<string, { count: number; date: Date }>();
+
+  for (const row of rows) {
+    const val = row[columnName];
+    const d = parseDateValue(val);
+    if (!d) continue;
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const key = `${year}-${month}`;
+
+    const existing = monthMap.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      monthMap.set(key, { count: 1, date: new Date(year, d.getMonth(), 1) });
+    }
+  }
+
+  const sortedKeys = Array.from(monthMap.keys()).sort();
+
+  return sortedKeys.map((key) => {
+    const item = monthMap.get(key)!;
+    const [yStr, mStr] = key.split('-');
+    const year = parseInt(yStr, 10);
+    const month = parseInt(mStr, 10);
+    const fullMonthName = item.date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const shortMonthName = item.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    return {
+      key,
+      label: fullMonthName,
+      shortLabel: shortMonthName,
+      year,
+      month,
+      count: item.count,
+    };
+  });
+}
+
+/**
+ * Checks whether a given cell's date matches any of the selected "YYYY-MM" months.
+ */
+export function isDateInMonths(
+  dateValue: unknown,
+  selectedMonths: string[]
+): boolean {
+  if (!selectedMonths || selectedMonths.length === 0) return false;
+  const d = parseDateValue(dateValue);
+  if (!d) return false;
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const key = `${year}-${month}`;
+
+  return selectedMonths.includes(key);
+}
+
 /**
  * Computes the minimum date and maximum date found in a given column for the dataset.
  */

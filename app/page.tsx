@@ -13,7 +13,13 @@ import {
   saveProfilesToStorage,
   setActiveProfileId,
 } from '@/lib/storage';
-import { calculateColumnMetrics, isDateInRange, haveSameHeadersFormat } from '@/lib/excelParser';
+import {
+  calculateColumnMetrics,
+  isDateInRange,
+  isDateInMonths,
+  getAvailableMonthsForColumn,
+  haveSameHeadersFormat,
+} from '@/lib/excelParser';
 
 export default function HomePage() {
   const [profiles, setProfiles] = useState<ProfileTemplate[]>([]);
@@ -22,10 +28,12 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [deduplicateByOrderId, setDeduplicateByOrderId] = useState(false);
 
-  // Date filter state
+  // Date filter state (mutually exclusive: Date Range vs Specific Months)
   const [selectedDateColumn, setSelectedDateColumn] = useState('');
+  const [dateFilterMode, setDateFilterMode] = useState<'range' | 'months'>('range');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
 
   // Date columns that are currently selected in "Columns in File"
   const selectedDateColumns = useMemo(() => {
@@ -45,13 +53,28 @@ export default function HomePage() {
           selectedDateColumns.find((c) => /paid/i.test(c)) ||
           selectedDateColumns[0];
         setSelectedDateColumn(bestCol);
+        if (parsedData?.rows) {
+          const avail = getAvailableMonthsForColumn(parsedData.rows, bestCol);
+          setSelectedMonths(avail.map((m) => m.key));
+        }
       }
     } else {
       setSelectedDateColumn('');
       setStartDate('');
       setEndDate('');
+      setSelectedMonths([]);
     }
-  }, [selectedDateColumns, selectedDateColumn]);
+  }, [selectedDateColumns, selectedDateColumn, parsedData]);
+
+  const handleSelectDateColumn = (col: string) => {
+    setSelectedDateColumn(col);
+    setStartDate('');
+    setEndDate('');
+    if (parsedData?.rows) {
+      const avail = getAvailableMonthsForColumn(parsedData.rows, col);
+      setSelectedMonths(avail.map((m) => m.key));
+    }
+  };
 
   // Initialize profiles from localStorage
   useEffect(() => {
@@ -101,6 +124,8 @@ export default function HomePage() {
     setParsedData(data);
     setStartDate('');
     setEndDate('');
+    setDateFilterMode('range');
+    setSelectedMonths([]);
 
     const lowerFileName = data.fileName.toLowerCase();
     const headerStr = data.headers.join(' ').toLowerCase();
@@ -226,18 +251,28 @@ export default function HomePage() {
     setSelectedDateColumn('');
     setStartDate('');
     setEndDate('');
+    setDateFilterMode('range');
+    setSelectedMonths([]);
   };
 
-  // Filter rows based on active date range filter and order deduplication
+  // Filter rows based on active date range / months filter and order deduplication
   const processedRows = useMemo(() => {
     if (!parsedData) return [];
     let rows = parsedData.rows;
 
-    // 1. Date Range Filter: automatically active whenever a date column is selected in "Columns in File" and dates are specified
-    if (selectedDateColumns.length > 0 && selectedDateColumn && (startDate || endDate)) {
-      rows = rows.filter((row) =>
-        isDateInRange(row[selectedDateColumn], startDate, endDate)
-      );
+    // 1. Date Filter (mutually exclusive: Date Range vs Specific Months)
+    if (selectedDateColumns.length > 0 && selectedDateColumn) {
+      if (dateFilterMode === 'range') {
+        if (startDate || endDate) {
+          rows = rows.filter((row) =>
+            isDateInRange(row[selectedDateColumn], startDate, endDate)
+          );
+        }
+      } else if (dateFilterMode === 'months') {
+        rows = rows.filter((row) =>
+          isDateInMonths(row[selectedDateColumn], selectedMonths)
+        );
+      }
     }
 
     // 2. Deduplicate Multi-Item Orders if requested
@@ -257,11 +292,56 @@ export default function HomePage() {
     parsedData,
     selectedDateColumns,
     selectedDateColumn,
+    dateFilterMode,
     startDate,
     endDate,
+    selectedMonths,
     deduplicateByOrderId,
     activeProfile?.orderIdColumn,
   ]);
+
+  const availableMonthsForCol = useMemo(() => {
+    if (!parsedData || !selectedDateColumn) return [];
+    return getAvailableMonthsForColumn(parsedData.rows, selectedDateColumn);
+  }, [parsedData, selectedDateColumn]);
+
+  const isDateFilterActive = useMemo(() => {
+    if (selectedDateColumns.length === 0 || !selectedDateColumn) return false;
+    if (dateFilterMode === 'range') {
+      return Boolean(startDate || endDate);
+    }
+    if (dateFilterMode === 'months') {
+      return (
+        availableMonthsForCol.length > 0 &&
+        selectedMonths.length !== availableMonthsForCol.length
+      );
+    }
+    return false;
+  }, [
+    selectedDateColumns,
+    selectedDateColumn,
+    dateFilterMode,
+    startDate,
+    endDate,
+    selectedMonths,
+    availableMonthsForCol,
+  ]);
+
+  const dateFilterDescription = useMemo(() => {
+    if (!selectedDateColumn) return '';
+    if (dateFilterMode === 'range') {
+      return `${startDate || 'Earliest'} → ${endDate || 'Latest'}`;
+    }
+    if (dateFilterMode === 'months') {
+      if (selectedMonths.length === 0) return 'No months selected';
+      if (selectedMonths.length === availableMonthsForCol.length) return 'All Months';
+      const names = availableMonthsForCol
+        .filter((m) => selectedMonths.includes(m.key))
+        .map((m) => m.shortLabel);
+      return names.join(', ');
+    }
+    return '';
+  }, [dateFilterMode, startDate, endDate, selectedDateColumn, selectedMonths, availableMonthsForCol]);
 
 
   // Reactive metrics computation - computed for summable columns over the processed/filtered rows
@@ -346,7 +426,7 @@ export default function HomePage() {
             setDeduplicateByOrderId={setDeduplicateByOrderId}
           />
 
-          {/* Section 2: Date Range Filter (Automatically displayed whenever a date column is selected in "Columns in File") */}
+          {/* Section 2: Date Filter (Automatically displayed whenever a date column is selected in "Columns in File") */}
           {selectedDateColumns.length > 0 && (
             <DateRangeFilter
               dateHeaders={selectedDateColumns}
@@ -354,14 +434,22 @@ export default function HomePage() {
               totalRawRows={parsedData.totalRowCount}
               filteredRowsCount={processedRows.length}
               selectedDateColumn={selectedDateColumn}
-              onSelectDateColumn={setSelectedDateColumn}
+              onSelectDateColumn={handleSelectDateColumn}
+              filterMode={dateFilterMode}
+              onFilterModeChange={setDateFilterMode}
               startDate={startDate}
               onStartDateChange={setStartDate}
               endDate={endDate}
               onEndDateChange={setEndDate}
+              selectedMonths={selectedMonths}
+              onSelectedMonthsChange={setSelectedMonths}
               onResetFilter={() => {
-                setStartDate('');
-                setEndDate('');
+                if (dateFilterMode === 'range') {
+                  setStartDate('');
+                  setEndDate('');
+                } else {
+                  setSelectedMonths(availableMonthsForCol.map((m) => m.key));
+                }
               }}
             />
           )}
@@ -379,13 +467,18 @@ export default function HomePage() {
             selectedColumns={activeProfile.selectedColumns}
             sumColumns={activeProfile.sumColumns}
             baseFileName={parsedData.fileName}
-            dateFilterActive={selectedDateColumns.length > 0 && Boolean(startDate || endDate)}
+            dateFilterActive={isDateFilterActive}
             dateFilterColumn={selectedDateColumn}
             startDate={startDate}
             endDate={endDate}
+            dateFilterDescription={dateFilterDescription}
             onClearDateFilter={() => {
-              setStartDate('');
-              setEndDate('');
+              if (dateFilterMode === 'range') {
+                setStartDate('');
+                setEndDate('');
+              } else {
+                setSelectedMonths(availableMonthsForCol.map((m) => m.key));
+              }
             }}
           />
         </div>
