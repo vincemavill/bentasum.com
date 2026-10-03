@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import devLogo from '@/public/assets/devname.png';
 
 export default function Navbar() {
   return (
@@ -64,10 +65,8 @@ export default function Navbar() {
                 title="Vince Mavill"
               >
                 <Image
-                  src="/assets/devname.png"
+                  src={devLogo}
                   alt="Vince Mavill"
-                  width={610}
-                  height={70}
                   className="h-3 w-auto object-contain"
                 />
               </a>
