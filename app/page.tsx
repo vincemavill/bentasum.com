@@ -13,7 +13,7 @@ import {
   saveProfilesToStorage,
   setActiveProfileId,
 } from '@/lib/storage';
-import { calculateColumnMetrics, isDateInRange } from '@/lib/excelParser';
+import { calculateColumnMetrics, isDateInRange, haveSameHeadersFormat } from '@/lib/excelParser';
 
 export default function HomePage() {
   const [profiles, setProfiles] = useState<ProfileTemplate[]>([]);
@@ -74,9 +74,14 @@ export default function HomePage() {
 
   // When a file is parsed, intelligently detect matching marketplace profile if possible
   const handleDataLoaded = (data: ParsedSpreadsheet) => {
-    // If an existing dataset is already active and we are appending/updating files,
-    // preserve active profile selection if its columns are still valid
-    if (parsedData && activeProfile && activeProfile.selectedColumns.length > 0) {
+    // If an existing dataset is already active and we are appending/updating files of the same format,
+    // preserve active profile selection
+    if (
+      parsedData &&
+      activeProfile &&
+      activeProfile.selectedColumns.length > 0 &&
+      haveSameHeadersFormat(parsedData.headers, data.headers)
+    ) {
       const validSelected = activeProfile.selectedColumns.filter((col) => data.headers.includes(col));
       if (validSelected.length > 0) {
         setParsedData(data);

@@ -24,6 +24,7 @@ export default function Dropzone({
   const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addFileInputRef = useRef<HTMLInputElement>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement>(null);
 
   // Normalize files list for display
   const fileList: IndividualFileInfo[] = useMemo(() => {
@@ -166,6 +167,13 @@ export default function Dropzone({
     e.target.value = '';
   };
 
+  const handleReplaceFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleProcessFiles(Array.from(e.target.files));
+    }
+    e.target.value = '';
+  };
+
   const handleAddFiles = async (files: File[]) => {
     if (!currentData || files.length === 0) return;
     setErrorMessage(null);
@@ -259,6 +267,13 @@ export default function Dropzone({
         accept=".xlsx,.xls,.csv"
         className="hidden"
         onChange={handleAddFileInputChange}
+      />
+      <input
+        ref={replaceFileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={handleReplaceFileInputChange}
       />
 
       {/* Drop Area or Loaded State */}
@@ -405,6 +420,23 @@ export default function Dropzone({
               </svg>
               <span>Add</span>
             </button>
+            {fileList.length === 1 && (
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => replaceFileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-2xs transition hover:bg-sky-50 hover:border-sky-400 active:scale-95 disabled:opacity-50 dark:border-sky-800 dark:bg-slate-900 dark:text-sky-300 dark:hover:bg-slate-800"
+                title="Replace this file with another file"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m17 2 4 4-4 4" />
+                  <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                  <path d="m7 22-4-4 4-4" />
+                  <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                </svg>
+                <span>Replace</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onReset}
