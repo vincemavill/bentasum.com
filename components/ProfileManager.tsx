@@ -443,7 +443,7 @@ export default function ProfileManager({
                     : 'text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-300'
                 }`}
               >
-                <span>∑ Summable Only</span>
+                <span>Summable Only</span>
                 <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
                   {summableHeaders.length}
                 </span>

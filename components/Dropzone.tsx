@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
-import { parseSpreadsheetFile, parseMultipleSpreadsheets } from '@/lib/excelParser';
+import { parseSpreadsheetFile, parseMultipleSpreadsheets, appendSpreadsheets } from '@/lib/excelParser';
 import { ParsedSpreadsheet, IndividualFileInfo } from '@/types/profile';
 
 interface DropzoneProps {
@@ -23,6 +23,7 @@ export default function Dropzone({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loadingSample, setLoadingSample] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const addFileInputRef = useRef<HTMLInputElement>(null);
 
   // Normalize files list for display
   const fileList: IndividualFileInfo[] = useMemo(() => {
@@ -158,6 +159,56 @@ export default function Dropzone({
     e.target.value = '';
   };
 
+  const handleAddFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleAddFiles(Array.from(e.target.files));
+    }
+    e.target.value = '';
+  };
+
+  const handleAddFiles = async (files: File[]) => {
+    if (!currentData || files.length === 0) return;
+    setErrorMessage(null);
+
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const invalidFiles = files.filter((file) => {
+      const lowerName = file.name.toLowerCase();
+      return !validExtensions.some((ext) => lowerName.endsWith(ext));
+    });
+
+    if (invalidFiles.length > 0) {
+      setErrorMessage(
+        files.length === 1
+          ? 'Please upload a valid spreadsheet (.xlsx, .xls, or .csv).'
+          : 'Some files have invalid extensions. Please upload only .xlsx, .xls, or .csv files.'
+      );
+      return;
+    }
+
+    // Check for duplicate file names
+    const existingNames = new Set(fileList.map((f) => f.fileName.toLowerCase()));
+    const duplicate = files.find((f) => existingNames.has(f.name.toLowerCase()));
+    if (duplicate) {
+      setErrorMessage(
+        `File "${duplicate.name}" is already loaded. Please remove it first or select a different file.`
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const updated = await appendSpreadsheets(currentData, files);
+      onDataLoaded(updated);
+    } catch (err: any) {
+      console.error('Error adding files:', err);
+      setErrorMessage(
+        err?.message || 'Could not add the selected file(s). Make sure they share the same format.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -200,6 +251,14 @@ export default function Dropzone({
         accept=".xlsx,.xls,.csv"
         className="hidden"
         onChange={handleFileInputChange}
+      />
+      <input
+        ref={addFileInputRef}
+        type="file"
+        multiple
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={handleAddFileInputChange}
       />
 
       {/* Drop Area or Loaded State */}
@@ -276,7 +335,7 @@ export default function Dropzone({
                 onClick={() => loadSampleExcel('shopee-order.xlsx')}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/90 px-3 py-1.5 font-semibold text-orange-700 shadow-xs transition hover:bg-orange-100 hover:border-orange-300 active:scale-95 disabled:opacity-50 dark:border-orange-900/60 dark:bg-orange-950/40 dark:text-orange-300"
               >
-                <span>🟠 Shopee (shopee-order.xlsx)</span>
+                <span>Shopee (shopee-order.xlsx)</span>
                 {loadingSample === 'shopee-order.xlsx' && <span className="animate-spin text-xs">⏳</span>}
               </button>
               <button
@@ -285,7 +344,7 @@ export default function Dropzone({
                 onClick={() => loadSampleExcel('lazada-order.xlsx')}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/90 px-3 py-1.5 font-semibold text-blue-700 shadow-xs transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 disabled:opacity-50 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300"
               >
-                <span>🔵 Lazada (lazada-order.xlsx)</span>
+                <span>Lazada (lazada-order.xlsx)</span>
                 {loadingSample === 'lazada-order.xlsx' && <span className="animate-spin text-xs">⏳</span>}
               </button>
               <button
@@ -294,7 +353,7 @@ export default function Dropzone({
                 onClick={() => loadSampleExcel('tiktok-orders.xlsx')}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-1.5 font-semibold text-rose-700 shadow-xs transition hover:bg-rose-100 hover:border-rose-300 active:scale-95 disabled:opacity-50 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
               >
-                <span>🎵 TikTok Shop (tiktok-orders.xlsx)</span>
+                <span>TikTok Shop (tiktok-orders.xlsx)</span>
                 {loadingSample === 'tiktok-orders.xlsx' && <span className="animate-spin text-xs">⏳</span>}
               </button>
             </div>
@@ -333,6 +392,19 @@ export default function Dropzone({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center">
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => addFileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-2xs transition hover:bg-emerald-50 hover:border-emerald-400 active:scale-95 disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+              title="Add more files to this dataset"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Add</span>
+            </button>
             <button
               type="button"
               onClick={onReset}
@@ -380,6 +452,19 @@ export default function Dropzone({
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => addFileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-2xs transition hover:bg-emerald-50 hover:border-emerald-400 active:scale-95 disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+                title="Add more files to this collection"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Add</span>
+              </button>
               <button
                 type="button"
                 onClick={onReset}

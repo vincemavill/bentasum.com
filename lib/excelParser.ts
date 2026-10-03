@@ -139,7 +139,7 @@ export async function parseSpreadsheetFile(file: File): Promise<ParsedSpreadshee
     totalRowCount: dataRows.length,
     fileCount: 1,
     fileNames: [file.name],
-    files: [{ fileName: file.name, fileSize: file.size, rowCount: dataRows.length }],
+    files: [{ fileName: file.name, fileSize: file.size, rowCount: dataRows.length, rows: dataRows }],
   };
 }
 
@@ -246,6 +246,130 @@ export async function parseMultipleSpreadsheets(files: File[]): Promise<ParsedSp
     files: fileInfos,
   };
 }
+
+/**
+ * Appends new spreadsheet file(s) to an existing ParsedSpreadsheet dataset.
+ * Validates that all new files share the exact same format as the existing dataset.
+ */
+export async function appendSpreadsheets(
+  existingData: ParsedSpreadsheet,
+  newFiles: File[]
+): Promise<ParsedSpreadsheet> {
+  if (newFiles.length === 0) {
+    return existingData;
+  }
+
+  // Parse all new files concurrently
+  const parsedNewList = await Promise.all(newFiles.map((file) => parseSpreadsheetFile(file)));
+
+  // Validate that every new file has readable rows
+  for (let i = 0; i < parsedNewList.length; i++) {
+    if (parsedNewList[i].rows.length === 0) {
+      throw new Error(`File "${newFiles[i].name}" contains no readable rows or transactions.`);
+    }
+  }
+
+  // Verify that all new files share the exact same format as the existing dataset
+  const baseHeaders = existingData.headers;
+  for (let i = 0; i < parsedNewList.length; i++) {
+    const current = parsedNewList[i];
+    if (!haveSameHeadersFormat(baseHeaders, current.headers)) {
+      throw new Error(
+        `File "${current.fileName}" does not match the column format of the loaded dataset. Please upload files with matching columns.`
+      );
+    }
+  }
+
+  // Normalize rows for each new file matching base headers
+  const newNormalizedRowsList: Record<string, any>[][] = [];
+  const allNewCombinedRows: Record<string, any>[] = [];
+
+  for (const parsed of parsedNewList) {
+    const keyMap = new Map<string, string>();
+    for (const hBase of baseHeaders) {
+      const match = parsed.headers.find(
+        (h) => h.toLowerCase().trim() === hBase.toLowerCase().trim()
+      );
+      if (match) {
+        keyMap.set(match, hBase);
+      }
+    }
+
+    const fileNormalizedRows: Record<string, any>[] = [];
+    for (const row of parsed.rows) {
+      const normalizedRow: Record<string, any> = {};
+      for (const hBase of baseHeaders) {
+        const origKey =
+          Array.from(keyMap.entries()).find(([_, target]) => target === hBase)?.[0] || hBase;
+        normalizedRow[hBase] = row[origKey] ?? row[hBase] ?? '';
+      }
+      fileNormalizedRows.push(normalizedRow);
+      allNewCombinedRows.push(normalizedRow);
+    }
+    newNormalizedRowsList.push(fileNormalizedRows);
+  }
+
+  // Extract existing file list
+  const existingFiles: IndividualFileInfo[] =
+    existingData.files && existingData.files.length > 0
+      ? existingData.files.map((f) => ({
+          fileName: f.fileName,
+          fileSize: f.fileSize,
+          rowCount: f.rowCount,
+          rows: f.rows && f.rows.length > 0 ? f.rows : undefined,
+        }))
+      : [
+          {
+            fileName: existingData.fileName,
+            fileSize: existingData.fileSize,
+            rowCount: existingData.totalRowCount,
+            rows: existingData.rows,
+          },
+        ];
+
+  // If any existing file didn't have rows populated (fallback by row counts)
+  const anyMissingRows = existingFiles.some((f) => !f.rows || f.rows.length === 0);
+  if (anyMissingRows) {
+    let offset = 0;
+    for (const f of existingFiles) {
+      if (!f.rows || f.rows.length === 0) {
+        f.rows = existingData.rows.slice(offset, offset + f.rowCount);
+      }
+      offset += f.rowCount;
+    }
+  }
+
+  // Build new file infos
+  const newFileInfos: IndividualFileInfo[] = parsedNewList.map((parsed, idx) => ({
+    fileName: parsed.fileName,
+    fileSize: parsed.fileSize,
+    rowCount: parsed.rows.length,
+    rows: newNormalizedRowsList[idx],
+  }));
+
+  const allFiles: IndividualFileInfo[] = [...existingFiles, ...newFileInfos];
+  const combinedRows = [...existingData.rows, ...allNewCombinedRows];
+  const totalFileSize = allFiles.reduce((acc, f) => acc + f.fileSize, 0);
+  const fileNames = allFiles.map((f) => f.fileName);
+  const displayFileName = `${allFiles[0].fileName} (+${allFiles.length - 1} more)`;
+
+  const summableHeaders = detectSummableColumns(baseHeaders, combinedRows);
+  const dateHeaders = detectDateColumns(baseHeaders, combinedRows);
+
+  return {
+    fileName: displayFileName,
+    fileSize: totalFileSize,
+    headers: baseHeaders,
+    summableHeaders,
+    dateHeaders,
+    rows: combinedRows,
+    totalRowCount: combinedRows.length,
+    fileCount: allFiles.length,
+    fileNames,
+    files: allFiles,
+  };
+}
+
 
 /**
  * Robustly parses various date formats common in marketplace exports:

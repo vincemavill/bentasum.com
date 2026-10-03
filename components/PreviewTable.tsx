@@ -194,11 +194,7 @@ export default function PreviewTable({
                   <th key={col} className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span>{col}</span>
-                      {isSum && (
-                        <span className="rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-                          ∑
-                        </span>
-                      )}
+                    
                     </div>
                   </th>
                 );

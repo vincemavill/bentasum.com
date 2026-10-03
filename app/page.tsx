@@ -74,6 +74,25 @@ export default function HomePage() {
 
   // When a file is parsed, intelligently detect matching marketplace profile if possible
   const handleDataLoaded = (data: ParsedSpreadsheet) => {
+    // If an existing dataset is already active and we are appending/updating files,
+    // preserve active profile selection if its columns are still valid
+    if (parsedData && activeProfile && activeProfile.selectedColumns.length > 0) {
+      const validSelected = activeProfile.selectedColumns.filter((col) => data.headers.includes(col));
+      if (validSelected.length > 0) {
+        setParsedData(data);
+        const summableCols = data.summableHeaders || [];
+        const validSum = activeProfile.sumColumns.filter(
+          (col) => data.headers.includes(col) && (summableCols.length === 0 || summableCols.includes(col))
+        );
+        setActiveProfile({
+          ...activeProfile,
+          selectedColumns: validSelected,
+          sumColumns: validSum.length > 0 ? validSum : activeProfile.sumColumns,
+        });
+        return;
+      }
+    }
+
     setParsedData(data);
     setStartDate('');
     setEndDate('');
