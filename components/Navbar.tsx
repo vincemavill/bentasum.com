@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Navbar() {
   return (
@@ -52,6 +53,25 @@ export default function Navbar() {
             >
               Terms
             </Link>
+
+            <div className="hidden items-center gap-1.5 border-l border-slate-200 pl-3 text-xs text-slate-500 sm:flex dark:border-slate-800 dark:text-slate-400">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">Built by</span>
+              <a
+                href="https://vincemavill.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center transition-opacity hover:opacity-80"
+                title="Vince Mavill"
+              >
+                <Image
+                  src="/assets/devname.png"
+                  alt="Vince Mavill"
+                  width={610}
+                  height={70}
+                  className="h-3 w-auto object-contain"
+                />
+              </a>
+            </div>
           </nav>
         </div>
       </div>

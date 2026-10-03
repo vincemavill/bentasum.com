@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -85,7 +86,24 @@ export default function Footer() {
           </p>
           <div className="mt-4 flex flex-col items-start justify-between gap-2 border-t border-slate-200/60 pt-4 text-xs text-slate-500 sm:flex-row sm:items-center dark:border-slate-800/60">
             <p>© {new Date().getFullYear()} BentaSum (BentaSum.com). All rights reserved.</p>
-            <p className="text-[11px] text-slate-400">Built for online merchants, by e-commerce operators.</p>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span>Built by</span>
+              <a
+                href="https://vincemavill.github.io/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center transition-opacity hover:opacity-80"
+                title="Vince Mavill"
+              >
+                <Image
+                  src="/assets/devname.png"
+                  alt="Vince Mavill"
+                  width={610}
+                  height={70}
+                  className="h-3 w-auto object-contain"
+                />
+              </a>
+            </div>
           </div>
         </div>
       </div>
