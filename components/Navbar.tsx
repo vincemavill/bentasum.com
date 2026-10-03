@@ -7,27 +7,10 @@ export default function Navbar() {
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-3">
           <Link href="/" className="group flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-indigo-600 text-white shadow-md shadow-emerald-500/20 transition-transform group-hover:scale-105">
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect width="18" height="18" x="3" y="3" rx="2" />
-                <path d="M3 9h18" />
-                <path d="M3 15h18" />
-                <path d="M9 3v18" />
-                <path d="M15 9l3 3-3 3" />
-              </svg>
-            </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Benta<span className="text-emerald-600 dark:text-emerald-400">Sum</span>
+                <span className="text-xl font-bold tracking-tight text-slate-900 transition-colors group-hover:opacity-90 dark:text-white">
+                  Benta<span className="text-emerald-600 dark:text-emerald-400">Sum.com</span>
                 </span>
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-950/60 dark:text-emerald-300">
                   100% Private
