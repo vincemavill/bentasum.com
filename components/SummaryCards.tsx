@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ColumnMetric } from '@/types/profile';
+import { ColumnMetric, CalculatedColumnConfig } from '@/types/profile';
 import { formatCurrency } from '@/lib/excelParser';
 
 interface SummaryCardsProps {
   metrics: Record<string, ColumnMetric>;
   sumColumns: string[];
   totalRowCount: number;
+  calculatedColumns?: CalculatedColumnConfig[];
 }
 
 export default function SummaryCards({
   metrics,
   sumColumns,
   totalRowCount,
+  calculatedColumns = [],
 }: SummaryCardsProps) {
   const [currencySymbol, setCurrencySymbol] = useState('₱');
 
@@ -71,6 +73,8 @@ export default function SummaryCards({
             average: 0,
           };
 
+          const matchingCalc = calculatedColumns.find((c) => c.name === col);
+
           // Distinguish negative / deduction looking columns
           const isDeduction =
             col.toLowerCase().includes('fee') ||
@@ -87,7 +91,9 @@ export default function SummaryCards({
               {/* Top Accent Line */}
               <div
                 className={`absolute top-0 inset-x-0 h-1 ${
-                  isDeduction
+                  matchingCalc
+                    ? 'bg-gradient-to-r from-teal-500 to-indigo-500'
+                    : isDeduction
                     ? 'bg-amber-500 dark:bg-amber-400'
                     : idx === 0
                     ? 'bg-emerald-500'
@@ -100,11 +106,18 @@ export default function SummaryCards({
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 truncate dark:text-slate-400">
                     {col}
                   </span>
-                  {isDeduction && (
+                  {matchingCalc ? (
+                    <span
+                      className="rounded bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 font-mono truncate max-w-[120px]"
+                      title={`${matchingCalc.leftColumn} ${matchingCalc.operation === '*' ? '×' : matchingCalc.operation} ${matchingCalc.rightColumn}`}
+                    >
+                      ƒ(x) {matchingCalc.operation === '+' ? 'Sum' : matchingCalc.operation === '*' ? 'Mult' : 'Diff'}
+                    </span>
+                  ) : isDeduction ? (
                     <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
                       Fee / Deduction
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">

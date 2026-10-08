@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ExportFormat } from '@/types/profile';
+import { ExportFormat, CalculatedColumnConfig } from '@/types/profile';
 import { exportCleanedSpreadsheet } from '@/lib/excelParser';
 
 interface PreviewTableProps {
@@ -9,6 +9,8 @@ interface PreviewTableProps {
   selectedColumns: string[];
   sumColumns: string[];
   baseFileName: string;
+  calculatedColumns?: CalculatedColumnConfig[];
+  secondaryColumns?: string[];
   dateFilterActive?: boolean;
   dateFilterColumn?: string;
   startDate?: string;
@@ -22,6 +24,8 @@ export default function PreviewTable({
   selectedColumns,
   sumColumns,
   baseFileName,
+  calculatedColumns = [],
+  secondaryColumns = [],
   dateFilterActive,
   dateFilterColumn,
   startDate,
@@ -192,11 +196,27 @@ export default function PreviewTable({
               <th className="w-12 px-3 py-3 text-center text-slate-400">#</th>
               {selectedColumns.map((col) => {
                 const isSum = sumColumns.includes(col);
+                const isCalc = calculatedColumns.some((c) => c.name === col);
+                const isLookup = secondaryColumns.includes(col);
                 return (
                   <th key={col} className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       <span>{col}</span>
-                    
+                      {isCalc && (
+                        <span className="rounded bg-emerald-100 px-1 py-0.2 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          ƒ(x)
+                        </span>
+                      )}
+                      {isLookup && (
+                        <span className="rounded bg-indigo-100 px-1 py-0.2 text-[9px] font-bold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                          🔗 lookup
+                        </span>
+                      )}
+                      {isSum && !isCalc && (
+                        <span className="rounded bg-slate-200/80 px-1 py-0.2 text-[9px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                          Σ
+                        </span>
+                      )}
                     </div>
                   </th>
                 );

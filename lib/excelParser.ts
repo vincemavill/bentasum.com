@@ -1,5 +1,12 @@
 import * as XLSX from 'xlsx';
-import { ColumnMetric, ExportFormat, ParsedSpreadsheet, IndividualFileInfo } from '@/types/profile';
+import {
+  ColumnMetric,
+  ExportFormat,
+  ParsedSpreadsheet,
+  IndividualFileInfo,
+  CalculatedColumnConfig,
+  JoinConfig,
+} from '@/types/profile';
 
 /**
  * Sanitizes currency strings and numeric text into a valid JavaScript float.
@@ -891,3 +898,240 @@ export function exportCleanedSpreadsheet({
 
   XLSX.writeFile(workbook, outFileName, { bookType: format === 'csv' ? 'csv' : 'xlsx' });
 }
+
+/**
+ * Intelligently suggests primary and secondary key columns for linking.
+ */
+export function suggestMatchingKeys(
+  primaryHeaders: string[],
+  secondaryHeaders: string[]
+): { primaryKey: string; secondaryKey: string } | null {
+  // 1. Direct exact match (case-insensitive)
+  for (const pHdr of primaryHeaders) {
+    const pNorm = pHdr.trim().toLowerCase();
+    for (const sHdr of secondaryHeaders) {
+      if (pNorm === sHdr.trim().toLowerCase()) {
+        return { primaryKey: pHdr, secondaryKey: sHdr };
+      }
+    }
+  }
+
+  // 2. High-priority ID / SKU keywords
+  const idPatterns = [
+    /order[_\s-]?id/i,
+    /product[_\s-]?order[_\s-]?id/i,
+    /order[_\s-]?number/i,
+    /order[_\s-]?no/i,
+    /orderitemid/i,
+    /\bsku\b/i,
+    /seller[_\s-]?sku/i,
+    /product[_\s-]?id/i,
+    /item[_\s-]?id/i,
+    /reference[_\s-]?no/i,
+    /barcode/i,
+  ];
+
+  for (const pattern of idPatterns) {
+    const pMatch = primaryHeaders.find((h) => pattern.test(h));
+    const sMatch = secondaryHeaders.find((h) => pattern.test(h));
+    if (pMatch && sMatch) {
+      return { primaryKey: pMatch, secondaryKey: sMatch };
+    }
+  }
+
+  // 3. Fallback: match any column containing 'order', 'id', or 'sku' in both
+  const pId = primaryHeaders.find((h) => /order|id|sku/i.test(h));
+  const sId = secondaryHeaders.find((h) => /order|id|sku/i.test(h));
+  if (pId && sId) {
+    return { primaryKey: pId, secondaryKey: sId };
+  }
+
+  return null;
+}
+
+/**
+ * Calculates match preview statistics and sample matched records for the mapping modal.
+ */
+export function calculateJoinPreview({
+  primaryRows,
+  primaryKey,
+  secondaryRows,
+  secondaryKey,
+  sampleLimit = 3,
+}: {
+  primaryRows: Record<string, any>[];
+  primaryKey: string;
+  secondaryRows: Record<string, any>[];
+  secondaryKey: string;
+  sampleLimit?: number;
+}): {
+  matchCount: number;
+  totalCount: number;
+  matchRate: number;
+  sampleMatches: {
+    keyValue: string;
+    primaryRow: Record<string, any>;
+    secondaryRow: Record<string, any>;
+  }[];
+} {
+  if (!primaryKey || !secondaryKey || primaryRows.length === 0 || secondaryRows.length === 0) {
+    return { matchCount: 0, totalCount: primaryRows.length, matchRate: 0, sampleMatches: [] };
+  }
+
+  // Build secondary map
+  const secondaryMap = new Map<string, Record<string, any>>();
+  for (const row of secondaryRows) {
+    const val = row[secondaryKey];
+    if (val !== undefined && val !== null) {
+      const keyStr = String(val).trim().toLowerCase();
+      if (keyStr && !secondaryMap.has(keyStr)) {
+        secondaryMap.set(keyStr, row);
+      }
+    }
+  }
+
+  let matchCount = 0;
+  const sampleMatches: {
+    keyValue: string;
+    primaryRow: Record<string, any>;
+    secondaryRow: Record<string, any>;
+  }[] = [];
+
+  for (const pRow of primaryRows) {
+    const pVal = pRow[primaryKey];
+    if (pVal !== undefined && pVal !== null) {
+      const pKeyStr = String(pVal).trim().toLowerCase();
+      if (pKeyStr && secondaryMap.has(pKeyStr)) {
+        matchCount++;
+        if (sampleMatches.length < sampleLimit) {
+          sampleMatches.push({
+            keyValue: String(pVal),
+            primaryRow: pRow,
+            secondaryRow: secondaryMap.get(pKeyStr)!,
+          });
+        }
+      }
+    }
+  }
+
+  const totalCount = primaryRows.length;
+  const matchRate = totalCount > 0 ? (matchCount / totalCount) * 100 : 0;
+
+  return { matchCount, totalCount, matchRate, sampleMatches };
+}
+
+/**
+ * Merges primary rows with secondary lookup rows using a relational Left Join on specified keys.
+ */
+export function performRelationalJoin({
+  primaryRows,
+  primaryKey,
+  secondaryRows,
+  secondaryKey,
+  selectedColumns,
+  columnAliases = {},
+}: {
+  primaryRows: Record<string, any>[];
+  primaryKey: string;
+  secondaryRows: Record<string, any>[];
+  secondaryKey: string;
+  selectedColumns: string[];
+  columnAliases?: Record<string, string>;
+}): {
+  mergedRows: Record<string, any>[];
+  matchCount: number;
+  totalCount: number;
+  matchRate: number;
+} {
+  if (!primaryKey || !secondaryKey || primaryRows.length === 0) {
+    return {
+      mergedRows: primaryRows,
+      matchCount: 0,
+      totalCount: primaryRows.length,
+      matchRate: 0,
+    };
+  }
+
+  // Index secondary records by normalized key
+  const secondaryMap = new Map<string, Record<string, any>>();
+  for (const sRow of secondaryRows) {
+    const sVal = sRow[secondaryKey];
+    if (sVal !== undefined && sVal !== null) {
+      const keyStr = String(sVal).trim().toLowerCase();
+      if (keyStr && !secondaryMap.has(keyStr)) {
+        secondaryMap.set(keyStr, sRow);
+      }
+    }
+  }
+
+  let matchCount = 0;
+  const mergedRows = primaryRows.map((pRow) => {
+    const newRow = { ...pRow };
+    const pVal = pRow[primaryKey];
+    const keyStr = pVal !== undefined && pVal !== null ? String(pVal).trim().toLowerCase() : '';
+    const matchedSecondary = keyStr ? secondaryMap.get(keyStr) : undefined;
+
+    if (matchedSecondary) {
+      matchCount++;
+    }
+
+    for (const secCol of selectedColumns) {
+      const targetCol = columnAliases[secCol] || secCol;
+      newRow[targetCol] = matchedSecondary ? (matchedSecondary[secCol] ?? '') : '';
+    }
+
+    return newRow;
+  });
+
+  const totalCount = primaryRows.length;
+  const matchRate = totalCount > 0 ? (matchCount / totalCount) * 100 : 0;
+
+  return {
+    mergedRows,
+    matchCount,
+    totalCount,
+    matchRate,
+  };
+}
+
+/**
+ * Evaluates configured calculated columns across all rows.
+ */
+export function applyCalculatedColumns(
+  rows: Record<string, any>[],
+  calculatedColumns: CalculatedColumnConfig[]
+): Record<string, any>[] {
+  if (!calculatedColumns || calculatedColumns.length === 0 || rows.length === 0) {
+    return rows;
+  }
+
+  return rows.map((row) => {
+    const enrichedRow = { ...row };
+
+    for (const calc of calculatedColumns) {
+      const v1 = sanitizeCurrencyToNumber(enrichedRow[calc.leftColumn]);
+      const v2 = sanitizeCurrencyToNumber(enrichedRow[calc.rightColumn]);
+
+      // If both values are null/empty, set empty
+      if (v1 === null && v2 === null) {
+        enrichedRow[calc.name] = '';
+        continue;
+      }
+
+      const num1 = v1 ?? 0;
+      const num2 = v2 ?? 0;
+      let result = 0;
+      if (calc.operation === '+') {
+        result = num1 + num2;
+      } else if (calc.operation === '-') {
+        result = num1 - num2;
+      } else if (calc.operation === '*') {
+        result = num1 * num2;
+      }
+      enrichedRow[calc.name] = Number(result.toFixed(2));
+    }
+
+    return enrichedRow;
+  });
+}
+
